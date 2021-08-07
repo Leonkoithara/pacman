@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class node_behaviour : MonoBehaviour
+public class NodeBehaviour : MonoBehaviour
 {
-    public int node_flag;
+    public int NodeFlag;
 
     /*
     right - 0001
