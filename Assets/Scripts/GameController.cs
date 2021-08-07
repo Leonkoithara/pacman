@@ -1,7 +1,59 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using System.Runtime.Serialization.Formatters.Binary;
+using System.IO;
 using UnityEngine;
 using UnityEngine.UI;
+
+[System.Serializable]
+public class ScoreObject
+{
+	public int _score;
+	public string _name;
+
+	public ScoreObject(string name, int score)
+	{
+		_name = name;
+		_score = score;
+	}
+}
+
+public static class HighScoreManager
+{
+	public static void SaveScore(string name, int score)
+	{
+        BinaryFormatter formatter = new BinaryFormatter();
+        string path = Application.persistentDataPath + "/pacman_highscores";
+
+        FileStream stream = new FileStream(path, FileMode.Create);
+        ScoreObject score_object = new ScoreObject(name, score);
+
+        formatter.Serialize(stream, score_object);
+        stream.Close();
+    }
+
+	public static ScoreObject LoadScore()
+	{
+		string path = Application.persistentDataPath + "/pacman_highscores";
+
+		if(File.Exists(path))
+		{
+			BinaryFormatter formatter = new BinaryFormatter();
+			FileStream stream = new FileStream(path, FileMode.Open);
+
+			ScoreObject data = formatter.Deserialize(stream) as ScoreObject;
+
+			stream.Close();
+
+			return data;
+        }
+		else
+        {
+            Debug.LogError("Error: Save file not found in " + path);
+            return null;
+		}
+	}
+}
 
 public class GameController : MonoBehaviour
 {
@@ -18,8 +70,9 @@ public class GameController : MonoBehaviour
 	public Text LevelText;
 	public Text LivesText;
 	public Text ScoreText;
-	
-	int level;
+    public Text HighScoreText;
+
+    int level;
 	int lives;
 	int score;
 
@@ -40,7 +93,13 @@ public class GameController : MonoBehaviour
 		Probablity = 10;
 		Speed = 0.04f;
 
-		LevelText.text = "Level: " + level;
+        ScoreObject so = HighScoreManager.LoadScore();
+		if(so != null)
+            HighScoreText.text = "High Score: " + so._score;
+		else
+			HighScoreText.text = "High Score: 0";
+
+        LevelText.text = "Level: " + level;
 		LivesText.text = "Lives: " + lives;
 		ScoreText.text = "Score: " + score;
 
@@ -110,11 +169,18 @@ public class GameController : MonoBehaviour
 	public void PacmanDeath()
 	{
 		GamePaused = true;
-
-		lives--;
+		
+        lives--;
 
 		if(lives == 0)
 		{
+			ScoreObject so = HighScoreManager.LoadScore();
+			if(so == null || so._score < score)
+			{
+				HighScoreManager.SaveScore("Leon", score);
+                HighScoreText.text = "High Score: " + score;
+            }
+			
 			level = 1;
 			lives = 3;
 			score = 0;
@@ -130,7 +196,7 @@ public class GameController : MonoBehaviour
 			foreach (Transform child in SpeedPills.transform)
 			{
 				child.gameObject.SetActive(true);
-			}			
+			}
 		}
 		LivesText.text = "Lives: " + lives;
 		LevelText.text = "Level: " + level;
